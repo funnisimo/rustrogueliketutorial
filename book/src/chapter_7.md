@@ -2,11 +2,11 @@
 
 ---
 
-***About this tutorial***
+**_About this tutorial_**
 
-*This tutorial is free and open source, and all code uses the MIT license - so you are free to do with it as you like. My hope is that you will enjoy the tutorial, and make great games!*
+_This tutorial is free and open source, and all code uses the MIT license - so you are free to do with it as you like. My hope is that you will enjoy the tutorial, and make great games!_
 
-*If you enjoy this and would like me to keep writing, please consider supporting [my Patreon](https://www.patreon.com/blackfuture).*
+_If you enjoy this and would like me to keep writing, please consider supporting [my Patreon](https://www.patreon.com/blackfuture)._
 
 [![Hands-On Rust](./beta-webBanner.jpg)](https://pragprog.com/titles/hwrust/hands-on-rust/)
 
@@ -27,6 +27,7 @@ fn is_exit_valid(&self, x:i32, y:i32) -> bool {
     self.tiles[idx as usize] != TileType::Wall
 }
 ```
+
 This takes an index, and calculates if it can be entered.
 
 We then implement the trait, using this helper:
@@ -55,9 +56,9 @@ impl BaseMap for Map {
     ...
     fn get_pathing_distance(&self, idx1:usize, idx2:usize) -> f32 {
         let w = self.width as usize;
-        let p1 = Point::new(idx1 % w, idx1 / w);
-        let p2 = Point::new(idx2 % w, idx2 / w);
-        rltk::DistanceAlg::Pythagoras.distance2d(p1, p2)
+        let p1 = RLTK::Point::new(idx1 % w, idx1 / w);
+        let p2 = RLTK::Point::new(idx2 % w, idx2 / w);
+        RLTK::DistanceAlg::Pythagoras.distance2d(p1, p2)
     }
 ```
 
@@ -66,14 +67,14 @@ Pretty straight-forward: we evaluate each possible exit, and add it to the `exit
 ```rust
 use specs::prelude::*;
 use super::{Viewshed, Monster, Name, Map, Position};
-use rltk::{Point, console};
+use bracket_lib::prelude as RLTK;
 
 pub struct MonsterAI {}
 
 impl<'a> System<'a> for MonsterAI {
     #[allow(clippy::type_complexity)]
     type SystemData = ( WriteExpect<'a, Map>,
-                        ReadExpect<'a, Point>,
+                        ReadExpect<'a, RLTK::Point>,
                         WriteStorage<'a, Viewshed>,
                         ReadStorage<'a, Monster>,
                         ReadStorage<'a, Name>,
@@ -84,8 +85,8 @@ impl<'a> System<'a> for MonsterAI {
 
         for (mut viewshed,_monster,name,mut pos) in (&mut viewshed, &monster, &name, &mut position).join() {
             if viewshed.visible_tiles.contains(&*player_pos) {
-                console::log(&format!("{} shouts insults", name.name));
-                let path = rltk::a_star_search(
+                RLTK::console::log(&format!("{} shouts insults", name.name));
+                let path = RLTK::a_star_search(
                     map.xy_idx(pos.x, pos.y) as i32,
                     map.xy_idx(player_pos.x, player_pos.y) as i32,
                     &mut *map
@@ -101,9 +102,9 @@ impl<'a> System<'a> for MonsterAI {
 }
 ```
 
-We've changed a few things to allow write access, requested access to the map. We've also added an `#[allow...]` to tell the linter that we really did mean to use quite so much in one type! The meat is the `a_star_search` call; RLTK includes a high-performance A* implementation, so we're asking it for a path from the monster's position to the player. Then we check that the path succeeded, and has more than 2 steps (step 0 is always the current location). If it does, then we move the monster to that point - and set their viewshed to be dirty.
+We've changed a few things to allow write access, requested access to the map. We've also added an `#[allow...]` to tell the linter that we really did mean to use quite so much in one type! The meat is the `a_star_search` call; RLTK includes a high-performance A\* implementation, so we're asking it for a path from the monster's position to the player. Then we check that the path succeeded, and has more than 2 steps (step 0 is always the current location). If it does, then we move the monster to that point - and set their viewshed to be dirty.
 
-If you `cargo run` the project, monsters will now chase the player - and stop if they lose line-of-sight. We're not preventing monsters from standing on each other - or you - and we're not having them *do* anything other than yell at your console - but it's a good start. It wasn't too hard to get chase mechanics in!
+If you `cargo run` the project, monsters will now chase the player - and stop if they lose line-of-sight. We're not preventing monsters from standing on each other - or you - and we're not having them _do_ anything other than yell at your console - but it's a good start. It wasn't too hard to get chase mechanics in!
 
 # Blocking access
 
@@ -115,7 +116,7 @@ First, we'll add another vector of bools to our `Map`:
 #[derive(Default)]
 pub struct Map {
     pub tiles : Vec<TileType>,
-    pub rooms : Vec<Rect>,
+    pub rooms : Vec<RLTK::Rect>,
     pub width : i32,
     pub height : i32,
     pub revealed_tiles : Vec<bool>,
@@ -158,7 +159,7 @@ fn is_exit_valid(&self, x:i32, y:i32) -> bool {
 }
 ```
 
-This is quite straightforward: it checks that `x` and `y` are within the map, returning `false` if the exit is outside of the map (this type of *bounds checking* is worth doing, it prevents your program from crashing because you tried to read outside of the the valid memory area). It then checks the *index* of the tiles array for the specified coordinates, and returns the *inverse* of `blocked` (the `!` is the same as `not` in most languages - so read it as "not blocked at `idx`").
+This is quite straightforward: it checks that `x` and `y` are within the map, returning `false` if the exit is outside of the map (this type of _bounds checking_ is worth doing, it prevents your program from crashing because you tried to read outside of the the valid memory area). It then checks the _index_ of the tiles array for the specified coordinates, and returns the _inverse_ of `blocked` (the `!` is the same as `not` in most languages - so read it as "not blocked at `idx`").
 
 Now we'll make a new component, `BlocksTile`. You should know the drill by now; in `Components.rs`:
 
@@ -176,8 +177,8 @@ gs.ecs.create_entity()
     .with(Position{ x, y })
     .with(Renderable{
         glyph,
-        fg: RGB::named(rltk::RED),
-        bg: RGB::named(rltk::BLACK),
+        fg: RLTK::RGB::named(RLTK::RED),
+        bg: RLTK::RGB::named(RLTK::BLACK),
     })
     .with(Viewshed{ visible_tiles : Vec::new(), range: 8, dirty: true })
     .with(Monster{})
@@ -230,10 +231,10 @@ impl State {
 If you `cargo run` now, monsters no longer end up on top of each other - but they do end up on top of the player. We should fix that. We can make the monster only yell when it is adjacent to the player. In `monster_ai_system.rs`, add this above the visibility test:
 
 ```rust
-let distance = rltk::DistanceAlg::Pythagoras.distance2d(Point::new(pos.x, pos.y), *player_pos);
+let distance = RLTK::DistanceAlg::Pythagoras.distance2d(RLTK::Point::new(pos.x, pos.y), *player_pos);
 if distance < 1.5 {
     // Attack goes here
-    console::log(&format!("{} shouts insults", name.name));
+    RLTK::console::log(&format!("{} shouts insults", name.name));
     return;
 }
 ```
@@ -244,15 +245,15 @@ Lastly, we want to stop the player from walking over monsters. In `player.rs`, w
 if !map.blocked[destination_idx] {
 ```
 
-Since we already put walls into the blocked list, this should take care of the issue for now. `cargo run` shows that monsters now block the player. They block them *perfectly* - so a monster that wants to be in your way is an unpassable obstacle!
+Since we already put walls into the blocked list, this should take care of the issue for now. `cargo run` shows that monsters now block the player. They block them _perfectly_ - so a monster that wants to be in your way is an unpassable obstacle!
 
 # Allowing Diagonal Movement
 
 It would be nice to be able to bypass the monsters - and diagonal movement is a mainstay of roguelikes. So lets go ahead and support it. In `map.rs`'s `get_available_exits` function, we add them:
 
 ```rust
-fn get_available_exits(&self, idx:usize) -> rltk::SmallVec<[(usize, f32); 10]> {
-    let mut exits = rltk::SmallVec::new();
+fn get_available_exits(&self, idx:usize) -> RLTK::SmallVec<[(usize, f32); 10]> {
+    let mut exits = RLTK::SmallVec::new();
     let x = idx as i32 % self.width;
     let y = idx as i32 / self.width;
     let w = self.width as usize;
@@ -276,39 +277,39 @@ fn get_available_exits(&self, idx:usize) -> rltk::SmallVec<[(usize, f32); 10]> {
 We also modify the `player.rs` input code:
 
 ```rust
-pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
+pub fn player_input(gs: &mut State, ctx: &mut RLTK::BTerm) -> RunState {
     // Player movement
     match ctx.key {
         None => { return RunState::Paused } // Nothing happened
         Some(key) => match key {
-            VirtualKeyCode::Left |
-            VirtualKeyCode::Numpad4 |
-            VirtualKeyCode::H => try_move_player(-1, 0, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Left |
+            RLTK::VirtualKeyCode::Numpad4 |
+            RLTK::VirtualKeyCode::H => try_move_player(-1, 0, &mut gs.ecs),
 
-            VirtualKeyCode::Right |
-            VirtualKeyCode::Numpad6 |
-            VirtualKeyCode::L => try_move_player(1, 0, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Right |
+            RLTK::VirtualKeyCode::Numpad6 |
+            RLTK::VirtualKeyCode::L => try_move_player(1, 0, &mut gs.ecs),
 
-            VirtualKeyCode::Up |
-            VirtualKeyCode::Numpad8 |
-            VirtualKeyCode::K => try_move_player(0, -1, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Up |
+            RLTK::VirtualKeyCode::Numpad8 |
+            RLTK::VirtualKeyCode::K => try_move_player(0, -1, &mut gs.ecs),
 
-            VirtualKeyCode::Down |
-            VirtualKeyCode::Numpad2 |
-            VirtualKeyCode::J => try_move_player(0, 1, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Down |
+            RLTK::VirtualKeyCode::Numpad2 |
+            RLTK::VirtualKeyCode::J => try_move_player(0, 1, &mut gs.ecs),
 
             // Diagonals
-            VirtualKeyCode::Numpad9 |
-            VirtualKeyCode::Y => try_move_player(1, -1, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Numpad9 |
+            RLTK::VirtualKeyCode::Y => try_move_player(1, -1, &mut gs.ecs),
 
-            VirtualKeyCode::Numpad7 |
-            VirtualKeyCode::U => try_move_player(-1, -1, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Numpad7 |
+            RLTK::VirtualKeyCode::U => try_move_player(-1, -1, &mut gs.ecs),
 
-            VirtualKeyCode::Numpad3 |
-            VirtualKeyCode::N => try_move_player(1, 1, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Numpad3 |
+            RLTK::VirtualKeyCode::N => try_move_player(1, 1, &mut gs.ecs),
 
-            VirtualKeyCode::Numpad1 |
-            VirtualKeyCode::B => try_move_player(-1, 1, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Numpad1 |
+            RLTK::VirtualKeyCode::B => try_move_player(-1, 1, &mut gs.ecs),
 
             _ => { return RunState::Paused }
         },
@@ -336,11 +337,13 @@ pub struct CombatStats {
 As usual, don't forget to register it in `main.rs`!
 
 We'll give the `Player` 30 hit points, 2 defense, and 5 power:
+
 ```rust
 .with(CombatStats{ max_hp: 30, hp: 30, defense: 2, power: 5 })
 ```
 
 Likewise, we'll give the monsters a weaker set of stats (we'll worry about monster differentiation later):
+
 ```rust
 .with(CombatStats{ max_hp: 16, hp: 16, defense: 1, power: 4 })
 ```
@@ -353,7 +356,7 @@ When traveling the map - as a player or a monster - it's really handy to know wh
 #[derive(Default)]
 pub struct Map {
     pub tiles : Vec<TileType>,
-    pub rooms : Vec<Rect>,
+    pub rooms : Vec<RLTK::Rect>,
     pub width : i32,
     pub height : i32,
     pub revealed_tiles : Vec<bool>,
@@ -379,7 +382,7 @@ pub fn clear_content_index(&mut self) {
 }
 ```
 
-This is also quite simple: it iterates (visits) every vector in the `tile_content` list, mutably (the `iter_mut` obtains a *mutable iterator*). It then tells each vector to `clear` itself - remove all content (it doesn't actually guarantee that it will free up the memory; vectors can keep empty sections ready for more data. This is actually a *good* thing, because acquiring new memory is one of the slowest things a program can do - so it helps keep things running fast).
+This is also quite simple: it iterates (visits) every vector in the `tile_content` list, mutably (the `iter_mut` obtains a _mutable iterator_). It then tells each vector to `clear` itself - remove all content (it doesn't actually guarantee that it will free up the memory; vectors can keep empty sections ready for more data. This is actually a _good_ thing, because acquiring new memory is one of the slowest things a program can do - so it helps keep things running fast).
 
 Then we'll upgrade the indexing system to index all entities by tile:
 
@@ -422,6 +425,7 @@ impl<'a> System<'a> for MapIndexingSystem {
 Most roguelike characters spend a lot of time hitting things, so let's implement that! Bump to attack (walking into the target) is the canonical way to do this. We want to expand `try_move_player` in `player.rs` to check to see if a tile we are trying to enter contains a target.
 
 We'll add a reader for `CombatStats` to the list of data-stores, and put in a quick enemy detector:
+
 ```rust
 let combat_stats = ecs.read_storage::<CombatStats>();
 let map = ecs.fetch::<Map>();
@@ -435,14 +439,14 @@ for (_player, pos, viewshed) in (&mut players, &mut positions, &mut viewsheds).j
             None => {}
             Some(t) => {
                 // Attack it
-                console::log(&format!("From Hell's Heart, I stab thee!"));
+                RLTK::console::log(&format!("From Hell's Heart, I stab thee!"));
                 return; // So we don't move after attacking
             }
         }
     }
 ```
 
-If you `cargo run` this, you'll see that you can walk up to a mob and try to move onto it. *From Hell's Heart, I stab thee!* appears on the console. So the detection works, and the attack is in the right place.
+If you `cargo run` this, you'll see that you can walk up to a mob and try to move onto it. _From Hell's Heart, I stab thee!_ appears on the console. So the detection works, and the attack is in the right place.
 
 # Player attacking and killing things
 
@@ -455,7 +459,7 @@ pub struct WantsToMelee {
 }
 ```
 
-We also want to track incoming damage. It's possible that you will suffer damage from more than one source in a turn, and Specs doesn't like it at all when you try and have more than one component of the same type on an entity. There are two possible approaches here: make the damage an entity itself (and track the victim), or make damage a *vector*. The latter seems the easier approach; so we'll make a `SufferDamage` component to track the damage - and attach/implement a method to make using it easy:
+We also want to track incoming damage. It's possible that you will suffer damage from more than one source in a turn, and Specs doesn't like it at all when you try and have more than one component of the same type on an entity. There are two possible approaches here: make the damage an entity itself (and track the victim), or make damage a _vector_. The latter seems the easier approach; so we'll make a `SufferDamage` component to track the damage - and attach/implement a method to make using it easy:
 
 ```rust
 #[derive(Component, Debug)]
@@ -475,7 +479,7 @@ impl SufferDamage {
 }
 ```
 
-(Don't forget to register them in `main.rs`!). We modify the player's movement command to create a component indicating the intention to attack (attaching a `wants_to_melee` to the *attacker*):
+(Don't forget to register them in `main.rs`!). We modify the player's movement command to create a component indicating the intention to attack (attaching a `wants_to_melee` to the _attacker_):
 
 ```rust
 let entities = ecs.entities();
@@ -498,6 +502,7 @@ for (entity, _player, pos, viewshed) in (&entities, &players, &mut positions, &m
 We'll need a `melee_combat_system` to handle Melee. This uses the `new_damage` system we created to ensure that multiple sources of damage may be applied in one turn:
 
 ```rust
+use bracket_lib::prelude as RLTK;
 use specs::prelude::*;
 use super::{CombatStats, WantsToMelee, Name, SufferDamage};
 
@@ -523,9 +528,9 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     let damage = i32::max(0, stats.power - target_stats.defense);
 
                     if damage == 0 {
-                        console::log(&format!("{} is unable to hurt {}", &name.name, &target_name.name));
+                        RLTK::console::log(&format!("{} is unable to hurt {}", &name.name, &target_name.name));
                     } else {
-                        console::log(&format!("{} hits {}, for {} hp.", &name.name, &target_name.name, damage));
+                        RLTK::console::log(&format!("{} hits {}, for {} hp.", &name.name, &target_name.name, damage));
                         SufferDamage::new_damage(&mut inflict_damage, wants_melee.target, damage);
                     }
                 }
@@ -537,7 +542,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
 }
 ```
 
-And we'll need a `damage_system` to apply the damage (we're separating it out, because damage could come from any number of sources!). We use an iterator to *sum* the damage, ensuring that it is all applied:
+And we'll need a `damage_system` to apply the damage (we're separating it out, because damage could come from any number of sources!). We use an iterator to _sum_ the damage, ensuring that it is all applied:
 
 ```rust
 use specs::prelude::*;
@@ -562,6 +567,7 @@ impl<'a> System<'a> for DamageSystem {
 ```
 
 We'll also add a method to clean up dead entities:
+
 ```rust
 pub fn delete_the_dead(ecs : &mut World) {
     let mut dead : Vec<Entity> = Vec::new();
@@ -588,16 +594,16 @@ If you `cargo run` now, you can run around the map hitting things - and they van
 
 Since we've already written systems to handle attacking and damaging, it's relatively easy to use the same code with monsters - just add a `WantsToMelee` component and they can attack/kill the player.
 
-We'll start off by making the *player entity* into a game resource, so it can be easily referenced. Like the player's position, it's something that we're likely to need all over the place - and since entity IDs are stable, we can rely on it existing. In `main.rs`, we change the `create_entity` for the player to return the entity object:
+We'll start off by making the _player entity_ into a game resource, so it can be easily referenced. Like the player's position, it's something that we're likely to need all over the place - and since entity IDs are stable, we can rely on it existing. In `main.rs`, we change the `create_entity` for the player to return the entity object:
 
 ```rust
 let player_entity = gs.ecs
     .create_entity()
     .with(Position { x: player_x, y: player_y })
     .with(Renderable {
-        glyph: rltk::to_cp437('@'),
-        fg: RGB::named(rltk::YELLOW),
-        bg: RGB::named(rltk::BLACK),
+        glyph: RLTK::to_cp437('@'),
+        fg: RLTK::RGB::named(RLTK::YELLOW),
+        bg: RLTK::RGB::named(RLTK::BLACK),
     })
     .with(Player{})
     .with(Viewshed{ visible_tiles : Vec::new(), range: 8, dirty: true })
@@ -615,16 +621,17 @@ gs.ecs.insert(player_entity);
 Now we modify the `monster_ai_system`. There's a bit of clean-up here, and the "hurl insults" code is completely replaced with a single component insert:
 
 ```rust
+use bracket_lib::prelude as RLTK;
 use specs::prelude::*;
 use super::{Viewshed, Monster, Map, Position, WantsToMelee, RunState};
-use rltk::{Point};
+
 
 pub struct MonsterAI {}
 
 impl<'a> System<'a> for MonsterAI {
     #[allow(clippy::type_complexity)]
     type SystemData = ( WriteExpect<'a, Map>,
-                        ReadExpect<'a, Point>,
+                        ReadExpect<'a, RLTK::Point>,
                         ReadExpect<'a, Entity>,
                         ReadExpect<'a, RunState>,
                         Entities<'a>,
@@ -637,13 +644,13 @@ impl<'a> System<'a> for MonsterAI {
         let (mut map, player_pos, player_entity, runstate, entities, mut viewshed, monster, mut position, mut wants_to_melee) = data;
 
         for (entity, mut viewshed,_monster,mut pos) in (&entities, &mut viewshed, &monster, &mut position).join() {
-            let distance = rltk::DistanceAlg::Pythagoras.distance2d(Point::new(pos.x, pos.y), *player_pos);
+            let distance = RLTK::DistanceAlg::Pythagoras.distance2d(RLTK::Point::new(pos.x, pos.y), *player_pos);
             if distance < 1.5 {
                 wants_to_melee.insert(entity, WantsToMelee{ target: *player_entity }).expect("Unable to insert attack");
             }
             else if viewshed.visible_tiles.contains(&*player_pos) {
                 // Path to the player
-                let path = rltk::a_star_search(
+                let path = RLTK::a_star_search(
                     map.xy_idx(pos.x, pos.y),
                     map.xy_idx(player_pos.x, player_pos.y),
                     &mut *map
@@ -674,7 +681,7 @@ pub fn delete_the_dead(ecs : &mut World) {
         let players = ecs.read_storage::<Player>();
         let entities = ecs.entities();
         for (entity, stats) in (&entities, &combat_stats).join() {
-            if stats.hp < 1 { 
+            if stats.hp < 1 {
                 let player = players.get(entity);
                 match player {
                     None => dead.push(entity),
@@ -686,7 +693,7 @@ pub fn delete_the_dead(ecs : &mut World) {
 
     for victim in dead {
         ecs.delete_entity(victim).expect("Unable to delete");
-    }    
+    }
 }
 ```
 
@@ -697,12 +704,13 @@ We'll worry about ending the game in a later chapter.
 If you look closely, you'll see that enemies can fight back even after they have taken fatal damage. While that fits with some Shakespearean dramas (they really should give a speech), it's not the kind of tactical play that roguelikes encourage. The problem is that our game state is just `Running` and `Paused` - and we aren't even running the systems when the player acts. Additionally, systems don't know what phase we are in - so they can't take that into account.
 
 Let's replace `RunState` with something more descriptive of each phase:
+
 ```rust
 #[derive(PartialEq, Copy, Clone)]
 pub enum RunState { AwaitingInput, PreRun, PlayerTurn, MonsterTurn }
 ```
 
-If you're running Visual Studio Code with RLS, half your project just turned red. That's ok, we'll refactor one step at a time. We're going to *remove* the `RunState` altogether from the main `GameState`:
+If you're running Visual Studio Code with RLS, half your project just turned red. That's ok, we'll refactor one step at a time. We're going to _remove_ the `RunState` altogether from the main `GameState`:
 
 ```rust
 pub struct State {
@@ -717,8 +725,9 @@ gs.ecs.insert(RunState::PreRun);
 ```
 
 Now to start refactoring `Tick`. Our new `tick` function looks like this:
+
 ```rust
-fn tick(&mut self, ctx : &mut Rltk) {
+fn tick(&mut self, ctx : &mut RLTK::BTerm) {
         ctx.cls();
         let mut newrunstate;
         {
@@ -774,7 +783,7 @@ Lastly, we modify `monster_ai_system` to only run if the state is `MonsterTurn` 
 impl<'a> System<'a> for MonsterAI {
     #[allow(clippy::type_complexity)]
     type SystemData = ( WriteExpect<'a, Map>,
-                        ReadExpect<'a, Point>,
+                        ReadExpect<'a, RLTK::Point>,
                         ReadExpect<'a, Entity>,
                         ReadExpect<'a, RunState>,
                         Entities<'a>,
@@ -813,7 +822,7 @@ If you `cargo run` the project, it now behaves as you'd expect: the player moves
 
 # Wrapping Up
 
-That was quite the chapter! We added in location indexing, damage, and killing things. The good news is that this is the hardest part; you now have a simple dungeon bash game! It's not particularly fun, and you *will* die (since there's no healing at all) - but the basics are there.
+That was quite the chapter! We added in location indexing, damage, and killing things. The good news is that this is the hardest part; you now have a simple dungeon bash game! It's not particularly fun, and you _will_ die (since there's no healing at all) - but the basics are there.
 
 **The source code for this chapter may be found [here](https://github.com/thebracket/rustrogueliketutorial/tree/master/chapter-07-damage)**
 
