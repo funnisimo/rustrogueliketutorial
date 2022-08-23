@@ -309,8 +309,8 @@ dependencies = [
 name = "chapter-06-monsters"
 version = "0.1.0"
 dependencies = [
- "rltk",
- "specs 0.17.0",
+ "bracket-lib",
+ "specs 0.18.0",
  "specs-derive",
 ]
 

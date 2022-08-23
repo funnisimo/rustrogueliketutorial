@@ -2,11 +2,11 @@
 
 ---
 
-***About this tutorial***
+**_About this tutorial_**
 
-*This tutorial is free and open source, and all code uses the MIT license - so you are free to do with it as you like. My hope is that you will enjoy the tutorial, and make great games!*
+_This tutorial is free and open source, and all code uses the MIT license - so you are free to do with it as you like. My hope is that you will enjoy the tutorial, and make great games!_
 
-*If you enjoy this and would like me to keep writing, please consider supporting [my Patreon](https://www.patreon.com/blackfuture).*
+_If you enjoy this and would like me to keep writing, please consider supporting [my Patreon](https://www.patreon.com/blackfuture)._
 
 [![Hands-On Rust](./beta-webBanner.jpg)](https://pragprog.com/titles/hwrust/hands-on-rust/)
 
@@ -20,13 +20,13 @@ We can simply add a `Renderable` component for each monster (we'll also add a `V
 
 ```rust
 for room in map.rooms.iter().skip(1) {
-    let (x,y) = room.center();
+    let { x, y } = room.center();
     gs.ecs.create_entity()
         .with(Position{ x, y })
         .with(Renderable{
-            glyph: rltk::to_cp437('g'),
-            fg: RGB::named(rltk::RED),
-            bg: RGB::named(rltk::BLACK),
+            glyph: RLTK::to_cp437('g'),
+            fg: RLTK::RGB::named(RLTK::RED),
+            bg: RLTK::RGB::named(RLTK::BLACK),
         })
         .with(Viewshed{ visible_tiles : Vec::new(), range: 8, dirty: true })
         .build();
@@ -63,23 +63,23 @@ It's rather dull to only have one monster type, so we'll amend our monster spawn
 Here's the spawner code:
 
 ```rust
-let mut rng = rltk::RandomNumberGenerator::new();
+let mut rng = RLTK::RandomNumberGenerator::new();
 for room in map.rooms.iter().skip(1) {
     let (x,y) = room.center();
 
-    let glyph : rltk::FontCharType;
+    let glyph : RLTK::FontCharType;
     let roll = rng.roll_dice(1, 2);
     match roll {
-        1 => { glyph = rltk::to_cp437('g') }
-        _ => { glyph = rltk::to_cp437('o') }
+        1 => { glyph = RLTK::to_cp437('g') }
+        _ => { glyph = RLTK::to_cp437('o') }
     }
 
     gs.ecs.create_entity()
         .with(Position{ x, y })
         .with(Renderable{
             glyph: glyph,
-            fg: RGB::named(rltk::RED),
-            bg: RGB::named(rltk::BLACK),
+            fg: RLTK::RGB::named(RLTK::RED),
+            bg: RLTK::RGB::named(RLTK::BLACK),
         })
         .with(Viewshed{ visible_tiles : Vec::new(), range: 8, dirty: true })
         .build();
@@ -90,7 +90,7 @@ Obviously, when we start adding in combat we'll want more variety - but it's a g
 
 # Making the monsters think
 
-Now to start making the monsters think! For now, they won't actually *do* much, beyond pondering their lonely existence. We should start by adding a tag component to indicate that an entity *is* a monster. In `components.rs` we add a simple struct:
+Now to start making the monsters think! For now, they won't actually _do_ much, beyond pondering their lonely existence. We should start by adding a tag component to indicate that an entity _is_ a monster. In `components.rs` we add a simple struct:
 
 ```rust
 #[derive(Component, Debug)]
@@ -104,8 +104,8 @@ gs.ecs.create_entity()
     .with(Position{ x, y })
     .with(Renderable{
         glyph: glyph,
-        fg: RGB::named(rltk::RED),
-        bg: RGB::named(rltk::BLACK),
+        fg: RLTK::RGB::named(RLTK::RED),
+        bg: RLTK::RGB::named(RLTK::BLACK),
     })
     .with(Viewshed{ visible_tiles : Vec::new(), range: 8, dirty: true })
     .with(Monster{})
@@ -117,12 +117,12 @@ Now we make a system for monster thought. We'll make a new file, `monster_ai_sys
 ```rust
 use specs::prelude::*;
 use super::{Viewshed, Position, Map, Monster};
-use rltk::{field_of_view, Point, console};
+use RLTK::{field_of_view, Point, console};
 
 pub struct MonsterAI {}
 
 impl<'a> System<'a> for MonsterAI {
-    type SystemData = ( ReadStorage<'a, Viewshed>, 
+    type SystemData = ( ReadStorage<'a, Viewshed>,
                         ReadStorage<'a, Position>,
                         ReadStorage<'a, Monster>);
 
@@ -136,7 +136,7 @@ impl<'a> System<'a> for MonsterAI {
 }
 ```
 
-Note that we're importing `console` from `rltk` - and printing with `console::log`. This is a helper provided by RLTK that detects if you are compiling to a regular program or a Web Assembly; if you are using a regular program, it calls `println!` and outputs to the console. If you are in `WASM`, it outputs to the *browser* console.
+Note that we're importing `console` from `rltk` - and printing with `console::log`. This is a helper provided by RLTK that detects if you are compiling to a regular program or a Web Assembly; if you are using a regular program, it calls `println!` and outputs to the console. If you are in `WASM`, it outputs to the _browser_ console.
 
 We'll also extend the system runner in `main.rs` to call it:
 
@@ -202,21 +202,21 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
     match ctx.key {
         None => { return RunState::Paused } // Nothing happened
         Some(key) => match key {
-            VirtualKeyCode::Left |
-            VirtualKeyCode::Numpad4 |
-            VirtualKeyCode::H => try_move_player(-1, 0, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Left |
+            RLTK::VirtualKeyCode::Numpad4 |
+            RLTK::VirtualKeyCode::H => try_move_player(-1, 0, &mut gs.ecs),
 
-            VirtualKeyCode::Right |
-            VirtualKeyCode::Numpad6 |
-            VirtualKeyCode::L => try_move_player(1, 0, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Right |
+            RLTK::VirtualKeyCode::Numpad6 |
+            RLTK::VirtualKeyCode::L => try_move_player(1, 0, &mut gs.ecs),
 
-            VirtualKeyCode::Up |
-            VirtualKeyCode::Numpad8 |
-            VirtualKeyCode::K => try_move_player(0, -1, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Up |
+            RLTK::VirtualKeyCode::Numpad8 |
+            RLTK::VirtualKeyCode::K => try_move_player(0, -1, &mut gs.ecs),
 
-            VirtualKeyCode::Down |
-            VirtualKeyCode::Numpad2 |
-            VirtualKeyCode::J => try_move_player(0, 1, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Down |
+            RLTK::VirtualKeyCode::Numpad2 |
+            RLTK::VirtualKeyCode::J => try_move_player(0, 1, &mut gs.ecs),
 
             _ => { return RunState::Paused }
         },
@@ -229,18 +229,18 @@ If you launch `cargo run` now, the game is back up to speed - and the monsters o
 
 # Quiet monsters until they see you
 
-You *could* let monsters think every time anything moves (and you probably will when you get into deeper simulation), but for now lets quiet them down a bit - and have them react if they can see the player.
+You _could_ let monsters think every time anything moves (and you probably will when you get into deeper simulation), but for now lets quiet them down a bit - and have them react if they can see the player.
 
-It's *highly* likely that systems will often want to know where the player is - so lets add that as a resource. In `main.rs`, one line puts it in (I don't recommend doing this for non-player entities; there are only so many resources available - but the player is one we use over and over again):
+It's _highly_ likely that systems will often want to know where the player is - so lets add that as a resource. In `main.rs`, one line puts it in (I don't recommend doing this for non-player entities; there are only so many resources available - but the player is one we use over and over again):
 
 ```rust
-gs.ecs.insert(Point::new(player_x, player_y));
+gs.ecs.insert(RLTK::Point::new(player_x, player_y));
 ```
 
 In `player.rs`, `try_move_player()`, update the resource when the player moves:
 
 ```rust
-let mut ppos = ecs.write_resource::<Point>();
+let mut ppos = ecs.write_resource::<RLTK::Point>();
 ppos.x = pos.x;
 ppos.y = pos.y;
 ```
@@ -250,13 +250,13 @@ We can then use that in our `monster_ai_system`. Here's a working version:
 ```rust
 use specs::prelude::*;
 use super::{Viewshed, Monster};
-use rltk::{Point, console};
+use bracket_lib::prelude as RLTK;
 
 pub struct MonsterAI {}
 
 impl<'a> System<'a> for MonsterAI {
-    type SystemData = ( ReadExpect<'a, Point>,
-                        ReadStorage<'a, Viewshed>, 
+    type SystemData = ( ReadExpect<'a, RLTK::Point>,
+                        ReadStorage<'a, Viewshed>,
                         ReadStorage<'a, Monster>);
 
     fn run(&mut self, data : Self::SystemData) {
@@ -264,7 +264,7 @@ impl<'a> System<'a> for MonsterAI {
 
         for (viewshed,_monster) in (&viewshed, &monster).join() {
             if viewshed.visible_tiles.contains(&*player_pos) {
-                console::log(format!("Monster shouts insults"));
+                RLTK::console::log(format!("Monster shouts insults"));
             }
         }
     }
@@ -288,22 +288,22 @@ We also register it in `main.rs`, which you should be comfortable with by now! W
 
 ```rust
 for (i,room) in map.rooms.iter().skip(1).enumerate() {
-    let (x,y) = room.center();
+    let RLTK::Point {x,y} = room.center();
 
-    let glyph : rltk::FontCharType;
+    let glyph : RLTK::FontCharType;
     let name : String;
     let roll = rng.roll_dice(1, 2);
     match roll {
-        1 => { glyph = rltk::to_cp437('g'); name = "Goblin".to_string(); }
-        _ => { glyph = rltk::to_cp437('o'); name = "Orc".to_string(); }
+        1 => { glyph = RLTK::to_cp437('g'); name = "Goblin".to_string(); }
+        _ => { glyph = RLTK::to_cp437('o'); name = "Orc".to_string(); }
     }
 
     gs.ecs.create_entity()
         .with(Position{ x, y })
         .with(Renderable{
             glyph: glyph,
-            fg: RGB::named(rltk::RED),
-            bg: RGB::named(rltk::BLACK),
+            fg: RLTK::RGB::named(RLTK::RED),
+            bg: RLTK::RGB::named(RLTK::BLACK),
         })
         .with(Viewshed{ visible_tiles : Vec::new(), range: 8, dirty: true })
         .with(Monster{})
@@ -317,13 +317,13 @@ Now we adjust the `monster_ai_system` to include the monster's name. The new AI 
 ```rust
 use specs::prelude::*;
 use super::{Viewshed, Monster, Name};
-use rltk::{Point};
+use bracket_lib::prelude as RLTK;
 
 pub struct MonsterAI {}
 
 impl<'a> System<'a> for MonsterAI {
-    type SystemData = ( ReadExpect<'a, Point>,
-                        ReadStorage<'a, Viewshed>, 
+    type SystemData = ( ReadExpect<'a, RLTK::Point>,
+                        ReadStorage<'a, Viewshed>,
                         ReadStorage<'a, Monster>,
                         ReadStorage<'a, Name>);
 
@@ -332,7 +332,7 @@ impl<'a> System<'a> for MonsterAI {
 
         for (viewshed,_monster,name) in (&viewshed, &monster, &name).join() {
             if viewshed.visible_tiles.contains(&*player_pos) {
-                console::log(&format!("{} shouts insults", name.name));
+                RLTK::console::log(&format!("{} shouts insults", name.name));
             }
         }
     }
@@ -344,11 +344,11 @@ We also need to give the player a name; we've explicitly included names in the A
 ```rust
 gs.ecs
     .create_entity()
-    .with(Position { x: player_x, y: player_y })
+    .with(Position { x: player_pos.x, y: player_pos.y })
     .with(Renderable {
-        glyph: rltk::to_cp437('@'),
-        fg: RGB::named(rltk::YELLOW),
-        bg: RGB::named(rltk::BLACK),
+        glyph: RLTK::to_cp437('@'),
+        fg: RLTK::RGB::named(RLTK::YELLOW),
+        bg: RLTK::RGB::named(RLTK::BLACK),
     })
     .with(Player{})
     .with(Viewshed{ visible_tiles : Vec::new(), range: 8, dirty: true })
@@ -356,7 +356,7 @@ gs.ecs
     .build();
 ```
 
-If you `cargo run` the project, you now see things like *Goblin #9 shouts insults* - so you can tell who is shouting.
+If you `cargo run` the project, you now see things like _Goblin #9 shouts insults_ - so you can tell who is shouting.
 
 ![Screenshot](./c6-s3.gif)
 
