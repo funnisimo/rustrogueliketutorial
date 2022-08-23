@@ -1,7 +1,7 @@
-use rltk::{GameState, Rltk, RGB, VirtualKeyCode};
+use bracket_lib::prelude as RLTK;
 use specs::prelude::*;
 use specs_derive::*;
-use std::cmp::{min, max};
+use std::cmp::{max, min};
 
 #[derive(Component)]
 struct Position {
@@ -11,9 +11,9 @@ struct Position {
 
 #[derive(Component)]
 struct Renderable {
-    glyph: rltk::FontCharType,
-    fg: RGB,
-    bg: RGB,
+    glyph: RLTK::FontCharType,
+    fg: RLTK::RGB,
+    bg: RLTK::RGB,
 }
 
 #[derive(Component, Debug)]
@@ -21,11 +21,12 @@ struct Player {}
 
 #[derive(PartialEq, Copy, Clone)]
 enum TileType {
-    Wall, Floor
+    Wall,
+    Floor,
 }
 
 struct State {
-    ecs: World
+    ecs: World,
 }
 
 pub fn xy_idx(x: i32, y: i32) -> usize {
@@ -33,7 +34,7 @@ pub fn xy_idx(x: i32, y: i32) -> usize {
 }
 
 fn new_map() -> Vec<TileType> {
-    let mut map = vec![TileType::Floor; 80*50];
+    let mut map = vec![TileType::Floor; 80 * 50];
 
     // Make the boundaries walls
     for x in 0..80 {
@@ -47,7 +48,7 @@ fn new_map() -> Vec<TileType> {
 
     // Now we'll randomly splat a bunch of walls. It won't be pretty, but it's a decent illustration.
     // First, obtain the thread-local RNG:
-    let mut rng = rltk::RandomNumberGenerator::new();
+    let mut rng = RLTK::RandomNumberGenerator::new();
 
     for _i in 0..400 {
         let x = rng.roll_dice(1, 79);
@@ -69,37 +70,49 @@ fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     for (_player, pos) in (&mut players, &mut positions).join() {
         let destination_idx = xy_idx(pos.x + delta_x, pos.y + delta_y);
         if map[destination_idx] != TileType::Wall {
-            pos.x = min(79 , max(0, pos.x + delta_x));
+            pos.x = min(79, max(0, pos.x + delta_x));
             pos.y = min(49, max(0, pos.y + delta_y));
         }
     }
 }
 
-fn player_input(gs: &mut State, ctx: &mut Rltk) {
+fn player_input(gs: &mut State, ctx: &mut RLTK::BTerm) {
     // Player movement
     match ctx.key {
         None => {} // Nothing happened
         Some(key) => match key {
-            VirtualKeyCode::Left => try_move_player(-1, 0, &mut gs.ecs),
-            VirtualKeyCode::Right => try_move_player(1, 0, &mut gs.ecs),
-            VirtualKeyCode::Up => try_move_player(0, -1, &mut gs.ecs),
-            VirtualKeyCode::Down => try_move_player(0, 1, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Left => try_move_player(-1, 0, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Right => try_move_player(1, 0, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Up => try_move_player(0, -1, &mut gs.ecs),
+            RLTK::VirtualKeyCode::Down => try_move_player(0, 1, &mut gs.ecs),
             _ => {}
         },
     }
 }
 
-fn draw_map(map: &[TileType], ctx : &mut Rltk) {
+fn draw_map(map: &[TileType], ctx: &mut RLTK::BTerm) {
     let mut y = 0;
     let mut x = 0;
     for tile in map.iter() {
         // Render a tile depending upon the tile type
         match tile {
             TileType::Floor => {
-                ctx.set(x, y, RGB::from_f32(0.5, 0.5, 0.5), RGB::from_f32(0., 0., 0.), rltk::to_cp437('.'));
+                ctx.set(
+                    x,
+                    y,
+                    RLTK::RGB::from_f32(0.5, 0.5, 0.5),
+                    RLTK::RGB::from_f32(0., 0., 0.),
+                    RLTK::to_cp437('.'),
+                );
             }
             TileType::Wall => {
-                ctx.set(x, y, RGB::from_f32(0.0, 1.0, 0.0), RGB::from_f32(0., 0., 0.), rltk::to_cp437('#'));
+                ctx.set(
+                    x,
+                    y,
+                    RLTK::RGB::from_f32(0.0, 1.0, 0.0),
+                    RLTK::RGB::from_f32(0., 0., 0.),
+                    RLTK::to_cp437('#'),
+                );
             }
         }
 
@@ -112,8 +125,8 @@ fn draw_map(map: &[TileType], ctx : &mut Rltk) {
     }
 }
 
-impl GameState for State {
-    fn tick(&mut self, ctx : &mut Rltk) {
+impl RLTK::GameState for State {
+    fn tick(&mut self, ctx: &mut RLTK::BTerm) {
         ctx.cls();
 
         player_input(self, ctx);
@@ -137,14 +150,11 @@ impl State {
     }
 }
 
-fn main() -> rltk::BError {
-    use rltk::RltkBuilder;
-    let context = RltkBuilder::simple80x50()
+fn main() -> RLTK::BError {
+    let context = RLTK::BTermBuilder::simple80x50()
         .with_title("Roguelike Tutorial")
         .build()?;
-    let mut gs = State {
-        ecs: World::new()
-    };
+    let mut gs = State { ecs: World::new() };
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Player>();
@@ -155,12 +165,12 @@ fn main() -> rltk::BError {
         .create_entity()
         .with(Position { x: 40, y: 25 })
         .with(Renderable {
-            glyph: rltk::to_cp437('@'),
-            fg: RGB::named(rltk::YELLOW),
-            bg: RGB::named(rltk::BLACK),
+            glyph: RLTK::to_cp437('@'),
+            fg: RLTK::RGB::named(RLTK::YELLOW),
+            bg: RLTK::RGB::named(RLTK::BLACK),
         })
-        .with(Player{})
+        .with(Player {})
         .build();
 
-    rltk::main_loop(context, gs)
+    RLTK::main_loop(context, gs)
 }
