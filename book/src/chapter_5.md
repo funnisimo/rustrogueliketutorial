@@ -2,11 +2,11 @@
 
 ---
 
-***About this tutorial***
+**_About this tutorial_**
 
-*This tutorial is free and open source, and all code uses the MIT license - so you are free to do with it as you like. My hope is that you will enjoy the tutorial, and make great games!*
+_This tutorial is free and open source, and all code uses the MIT license - so you are free to do with it as you like. My hope is that you will enjoy the tutorial, and make great games!_
 
-*If you enjoy this and would like me to keep writing, please consider supporting [my Patreon](https://www.patreon.com/blackfuture).*
+_If you enjoy this and would like me to keep writing, please consider supporting [my Patreon](https://www.patreon.com/blackfuture)._
 
 [![Hands-On Rust](./beta-webBanner.jpg)](https://pragprog.com/titles/hwrust/hands-on-rust/)
 
@@ -21,7 +21,7 @@ This chapter starts with the code from chapter 4.
 We'll keep map-related functions and data together, to keep things clear as we make an ever-more-complicated game. The bulk of this is creating a new `Map` structure, and moving our helper functions to its implementation.
 
 ```rust
-use rltk::{ RGB, Rltk, RandomNumberGenerator };
+use bracket_lib::prelude as RLTK;
 use super::{Rect};
 use std::cmp::{max, min};
 
@@ -32,7 +32,7 @@ pub enum TileType {
 
 pub struct Map {
     pub tiles : Vec<TileType>,
-    pub rooms : Vec<Rect>,
+    pub rooms : Vec<RLTK::Rect>,
     pub width : i32,
     pub height : i32
 }
@@ -42,7 +42,7 @@ impl Map {
         (y as usize * self.width as usize) + x as usize
     }
 
-    fn apply_room_to_map(&mut self, room : &Rect) {
+    fn apply_room_to_map(&mut self, room : &RLTK::Rect) {
         for y in room.y1 +1 ..= room.y2 {
             for x in room.x1 + 1 ..= room.x2 {
                 let idx = self.xy_idx(x, y);
@@ -83,14 +83,14 @@ impl Map {
         const MIN_SIZE : i32 = 6;
         const MAX_SIZE : i32 = 10;
 
-        let mut rng = RandomNumberGenerator::new();
+        let mut rng = RLTK::RandomNumberGenerator::new();
 
         for i in 0..MAX_ROOMS {
             let w = rng.range(MIN_SIZE, MAX_SIZE);
             let h = rng.range(MIN_SIZE, MAX_SIZE);
             let x = rng.roll_dice(1, map.width - w - 1) - 1;
             let y = rng.roll_dice(1, map.height - h - 1) - 1;
-            let new_room = Rect::new(x, y, w, h);
+            let new_room = RLTK::Rect::with_size(x, y, w, h);
             let mut ok = true;
             for other_room in map.rooms.iter() {
                 if new_room.intersect(other_room) { ok = false }
@@ -99,14 +99,14 @@ impl Map {
                 map.apply_room_to_map(&new_room);
 
                 if !map.rooms.is_empty() {
-                    let (new_x, new_y) = new_room.center();
-                    let (prev_x, prev_y) = map.rooms[map.rooms.len()-1].center();
+                    let new_pos = new_room.center();
+                    let prev_pos = map.rooms[map.rooms.len()-1].center();
                     if rng.range(0,2) == 1 {
-                        map.apply_horizontal_tunnel(prev_x, new_x, prev_y);
-                        map.apply_vertical_tunnel(prev_y, new_y, new_x);
+                        map.apply_horizontal_tunnel(prev_pos.x, new_pos.x, prev_pos.y);
+                        map.apply_vertical_tunnel(prev_pos.y, new_pos.y, new_pos.x);
                     } else {
-                        map.apply_vertical_tunnel(prev_y, new_y, prev_x);
-                        map.apply_horizontal_tunnel(prev_x, new_x, new_y);
+                        map.apply_vertical_tunnel(prev_pos.y, new_pos.y, prev_pos.x);
+                        map.apply_horizontal_tunnel(prev_pos.x, new_pos.x, new_pos.y);
                     }
                 }
 
@@ -123,12 +123,12 @@ There's changes in `main` and `player`, too - see the example source for all the
 
 # The field-of-view component
 
-Not just the player has limited visibility! Eventually, we'll want monsters to consider what they can see, too. So, since its reusable code, we'll make a `Viewshed` component. (I like the word *viewshed*; it comes from the cartography world - literally "what can I see from here?" - and perfectly describes our problem). We'll give each entity that has a *Viewshed* a list of tile indices they can see. In `components.rs` we add:
+Not just the player has limited visibility! Eventually, we'll want monsters to consider what they can see, too. So, since its reusable code, we'll make a `Viewshed` component. (I like the word _viewshed_; it comes from the cartography world - literally "what can I see from here?" - and perfectly describes our problem). We'll give each entity that has a _Viewshed_ a list of tile indices they can see. In `components.rs` we add:
 
 ```rust
 #[derive(Component)]
 pub struct Viewshed {
-    pub visible_tiles : Vec<rltk::Point>,
+    pub visible_tiles : Vec<RLTK::Point>,
     pub range : i32
 }
 ```
@@ -146,9 +146,9 @@ gs.ecs
     .create_entity()
     .with(Position { x: player_x, y: player_y })
     .with(Renderable {
-        glyph: rltk::to_cp437('@'),
-        fg: RGB::named(rltk::YELLOW),
-        bg: RGB::named(rltk::BLACK),
+        glyph: RLTK::to_cp437('@'),
+        fg: RLTK::RGB::named(RLTK::YELLOW),
+        bg: RLTK::RGB::named(RLTK::BLACK),
     })
     .with(Player{})
     .with(Viewshed{ visible_tiles : Vec::new(), range : 8 })
@@ -159,7 +159,7 @@ Player is getting quite complicated now - that's good, it shows what an ECS is g
 
 # A new system: generic viewsheds
 
-We'll start by defining a *system* to take care of this for us. We want this to be generic, so it works for anything that can benefit from knowing what it can see. We create a new file, `visibility_system.rs`:
+We'll start by defining a _system_ to take care of this for us. We want this to be generic, so it works for anything that can benefit from knowing what it can see. We create a new file, `visibility_system.rs`:
 
 ```rust
 use specs::prelude::*;
@@ -168,7 +168,7 @@ use super::{Viewshed, Position};
 pub struct VisibilitySystem {}
 
 impl<'a> System<'a> for VisibilitySystem {
-    type SystemData = ( WriteStorage<'a, Viewshed>, 
+    type SystemData = ( WriteStorage<'a, Viewshed>,
                         WriteStorage<'a, Position>);
 
     fn run(&mut self, (mut viewshed, pos) : Self::SystemData) {
@@ -197,18 +197,18 @@ mod visibility_system;
 use visibility_system::VisibilitySystem;
 ```
 
-This doesn't actually *do* anything, yet - but we've added a system into the dispatcher, and as soon as we flesh out the code to actually plot the visibility, it will apply to every entity that has both a *Viewshed* and a *Position* component.
+This doesn't actually _do_ anything, yet - but we've added a system into the dispatcher, and as soon as we flesh out the code to actually plot the visibility, it will apply to every entity that has both a _Viewshed_ and a _Position_ component.
 
 # Asking RLTK for a Viewshed: Trait Implementation
 
-RLTK is written to not care about how you've chosen to lay out your map: I want it to be useful for anyone, and not everyone does maps the way this tutorial does. To act as a bridge between our map implementation and RLTK, it provides some *traits* for us to support. For this example, we need `BaseMap` and `Algorithm2D`. Don't worry, they are simple enough to implement.
+RLTK is written to not care about how you've chosen to lay out your map: I want it to be useful for anyone, and not everyone does maps the way this tutorial does. To act as a bridge between our map implementation and RLTK, it provides some _traits_ for us to support. For this example, we need `BaseMap` and `Algorithm2D`. Don't worry, they are simple enough to implement.
 
 In our `map.rs` file, we add the following:
 
 ```rust
-impl Algorithm2D for Map {
-    fn dimensions(&self) -> Point {
-        Point::new(self.width, self.height)
+impl RLTK::Algorithm2D for Map {
+    fn dimensions(&self) -> RLTK::Point {
+        RLTK::Point::new(self.width, self.height)
     }
 }
 ```
@@ -218,7 +218,7 @@ RLTK is able to figure out a lot of other traits from the `dimensions` function:
 We also need to support `BaseMap`. We don't need all of it yet, so we're going to let it use defaults. In `map.rs`:
 
 ```rust
-impl BaseMap for Map {
+impl RLTK::BaseMap for Map {
     fn is_opaque(&self, idx:usize) -> bool {
         self.tiles[idx as usize] == TileType::Wall
     }
@@ -234,13 +234,13 @@ So going back to `visibility_system.rs`, we now have what we need to request a v
 ```rust
 use specs::prelude::*;
 use super::{Viewshed, Position, Map};
-use rltk::{field_of_view, Point};
+use bracket_lib::prelude as RLTK;
 
 pub struct VisibilitySystem {}
 
 impl<'a> System<'a> for VisibilitySystem {
     type SystemData = ( ReadExpect<'a, Map>,
-                        WriteStorage<'a, Viewshed>, 
+                        WriteStorage<'a, Viewshed>,
                         WriteStorage<'a, Position>);
 
     fn run(&mut self, data : Self::SystemData) {
@@ -248,7 +248,7 @@ impl<'a> System<'a> for VisibilitySystem {
 
         for (viewshed,pos) in (&mut viewshed, &pos).join() {
             viewshed.visible_tiles.clear();
-            viewshed.visible_tiles = field_of_view(Point::new(pos.x, pos.y), viewshed.range, &*map);
+            viewshed.visible_tiles = RLTK::field_of_view(RLTK::Point::new(pos.x, pos.y), viewshed.range, &*map);
             viewshed.visible_tiles.retain(|p| p.x >= 0 && p.x < map.width && p.y >= 0 && p.y < map.height );
         }
     }
@@ -257,10 +257,10 @@ impl<'a> System<'a> for VisibilitySystem {
 
 There's quite a bit here, and the viewshed is actually the simplest part:
 
-* We've added a `ReadExpect<'a, Map>` - meaning that the system should be passed our `Map` for use. We used `ReadExpect`, because not having a map is a failure.
-* In the loop, we first clear the list of visible tiles.
-* Then we call RLTK's `field_of_view` function, providing the starting point (the location of the entity, from `pos`), the range (from the viewshed), and a slightly convoluted "dereference, then get a reference" to unwrap `Map` from the ECS.
-* Finally we use the vector's `retain` method to delete any entries that *don't* meet the criteria we specify. This is a *lambda* or *closure* - it iterates over the vector, passing `p` as a parameter. If p is inside the map boundaries, we keep it. This prevents other functions from trying to access a tile outside of the working map area.
+- We've added a `ReadExpect<'a, Map>` - meaning that the system should be passed our `Map` for use. We used `ReadExpect`, because not having a map is a failure.
+- In the loop, we first clear the list of visible tiles.
+- Then we call RLTK's `field_of_view` function, providing the starting point (the location of the entity, from `pos`), the range (from the viewshed), and a slightly convoluted "dereference, then get a reference" to unwrap `Map` from the ECS.
+- Finally we use the vector's `retain` method to delete any entries that _don't_ meet the criteria we specify. This is a _lambda_ or _closure_ - it iterates over the vector, passing `p` as a parameter. If p is inside the map boundaries, we keep it. This prevents other functions from trying to access a tile outside of the working map area.
 
 This will now run every frame (which is overkill, more on that later) - and store a list of visible tiles.
 
@@ -269,7 +269,7 @@ This will now run every frame (which is overkill, more on that later) - and stor
 As a first try, we'll change our `draw_map` function to retrieve the map, and the player's viewshed. It will only draw tiles present in the viewshed:
 
 ```rust
-pub fn draw_map(ecs: &World, ctx : &mut Rltk) {
+pub fn draw_map(ecs: &World, ctx : &mut RLTK::BTerm) {
     let mut viewsheds = ecs.write_storage::<Viewshed>();
     let mut players = ecs.write_storage::<Player>();
     let map = ecs.fetch::<Map>();
@@ -283,10 +283,10 @@ pub fn draw_map(ecs: &World, ctx : &mut Rltk) {
             if viewshed.visible_tiles.contains(&pt) {
                 match tile {
                     TileType::Floor => {
-                        ctx.set(x, y, RGB::from_f32(0.5, 0.5, 0.5), RGB::from_f32(0., 0., 0.), rltk::to_cp437('.'));
+                        ctx.set(x, y, RLTK::RGB::from_f32(0.5, 0.5, 0.5), RLTK::RGB::from_f32(0., 0., 0.), RLTK::to_cp437('.'));
                     }
                     TileType::Wall => {
-                        ctx.set(x, y, RGB::from_f32(0.0, 1.0, 0.0), RGB::from_f32(0., 0., 0.), rltk::to_cp437('#'));
+                        ctx.set(x, y, RLTK::RGB::from_f32(0.0, 1.0, 0.0), RLTK::RGB::from_f32(0., 0., 0.), RLTK::to_cp437('#'));
                     }
                 }
             }
@@ -314,7 +314,7 @@ To simulate map memory, we'll extend our `Map` class to include a `revealed_tile
 #[derive(Default)]
 pub struct Map {
     pub tiles : Vec<TileType>,
-    pub rooms : Vec<Rect>,
+    pub rooms : Vec<RLTK::Rect>,
     pub width : i32,
     pub height : i32,
     pub revealed_tiles : Vec<bool>
@@ -338,7 +338,7 @@ That adds a `false` value for every tile.
 We change the `draw_map` to look at this value, rather than iterating the component each time. The function now looks like this:
 
 ```rust
-pub fn draw_map(ecs: &World, ctx : &mut Rltk) {
+pub fn draw_map(ecs: &World, ctx : &mut RLTK::BTerm) {
     let map = ecs.fetch::<Map>();
 
     let mut y = 0;
@@ -348,10 +348,10 @@ pub fn draw_map(ecs: &World, ctx : &mut Rltk) {
         if map.revealed_tiles[idx] {
             match tile {
                 TileType::Floor => {
-                    ctx.set(x, y, RGB::from_f32(0.5, 0.5, 0.5), RGB::from_f32(0., 0., 0.), rltk::to_cp437('.'));
+                    ctx.set(x, y, RLTK::RGB::from_f32(0.5, 0.5, 0.5), RLTK::RGB::from_f32(0., 0., 0.), RLTK::to_cp437('.'));
                 }
                 TileType::Wall => {
-                    ctx.set(x, y, RGB::from_f32(0.0, 1.0, 0.0), RGB::from_f32(0., 0., 0.), rltk::to_cp437('#'));
+                    ctx.set(x, y, RLTK::RGB::from_f32(0.0, 1.0, 0.0), RLTK::RGB::from_f32(0., 0., 0.), RLTK::to_cp437('#'));
                 }
             }
         }
@@ -371,14 +371,14 @@ This will render a black screen, because we're never setting any tiles to be rev
 ```rust
 use specs::prelude::*;
 use super::{Viewshed, Position, Map, Player};
-use rltk::{field_of_view, Point};
+use bracket_lib::prelude as RLTK;
 
 pub struct VisibilitySystem {}
 
 impl<'a> System<'a> for VisibilitySystem {
     type SystemData = ( WriteExpect<'a, Map>,
                         Entities<'a>,
-                        WriteStorage<'a, Viewshed>, 
+                        WriteStorage<'a, Viewshed>,
                         WriteStorage<'a, Position>,
                         ReadStorage<'a, Player>);
 
@@ -387,7 +387,7 @@ impl<'a> System<'a> for VisibilitySystem {
 
         for (ent,viewshed,pos) in (&entities, &mut viewshed, &pos).join() {
             viewshed.visible_tiles.clear();
-            viewshed.visible_tiles = field_of_view(Point::new(pos.x, pos.y), viewshed.range, &*map);
+            viewshed.visible_tiles = RLTK::field_of_view(RLTK::Point::new(pos.x, pos.y), viewshed.range, &*map);
             viewshed.visible_tiles.retain(|p| p.x >= 0 && p.x < map.width && p.y >= 0 && p.y < map.height );
 
             // If this is the player, reveal what they can see
@@ -414,7 +414,7 @@ It's still not as efficient as it could be! Lets only update viewsheds when we n
 ```rust
 #[derive(Component)]
 pub struct Viewshed {
-    pub visible_tiles : Vec<rltk::Point>,
+    pub visible_tiles : Vec<RLTK::Point>,
     pub range : i32,
     pub dirty : bool
 }
@@ -445,7 +445,7 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
 
 This should be pretty familiar by now: we've added `viewsheds` to get write storage, and included it in the list of component types we are iterating. Then one call sets the flag to `true` after a move.
 
-The game now runs *very* fast once more, if you type `cargo run`.
+The game now runs _very_ fast once more, if you type `cargo run`.
 
 # Greying out what we remember, but can't see
 
@@ -455,7 +455,7 @@ One more extension: we'd like to render the parts of the map we know are there b
 #[derive(Default)]
 pub struct Map {
     pub tiles : Vec<TileType>,
-    pub rooms : Vec<Rect>,
+    pub rooms : Vec<RLTK::Rect>,
     pub width : i32,
     pub height : i32,
     pub revealed_tiles : Vec<bool>,
@@ -469,7 +469,7 @@ Our creation method also needs to know to add all false to it, just like before:
 if viewshed.dirty {
     viewshed.dirty = false;
     viewshed.visible_tiles.clear();
-    viewshed.visible_tiles = field_of_view(Point::new(pos.x, pos.y), viewshed.range, &*map);
+    viewshed.visible_tiles = RLTK::field_of_view(RLTK::Point::new(pos.x, pos.y), viewshed.range, &*map);
     viewshed.visible_tiles.retain(|p| p.x >= 0 && p.x < map.width && p.y >= 0 && p.y < map.height );
 
     // If this is the player, reveal what they can see
@@ -488,7 +488,7 @@ if viewshed.dirty {
 Now we adjust the `draw_map` function to handle revealed but not currently visible tiles differently. The new `draw_map` function looks like this:
 
 ```rust
-pub fn draw_map(ecs: &World, ctx : &mut Rltk) {
+pub fn draw_map(ecs: &World, ctx : &mut RLTK::BTerm) {
     let map = ecs.fetch::<Map>();
 
     let mut y = 0;
@@ -501,16 +501,16 @@ pub fn draw_map(ecs: &World, ctx : &mut Rltk) {
             let mut fg;
             match tile {
                 TileType::Floor => {
-                    glyph = rltk::to_cp437('.');
-                    fg = RGB::from_f32(0.0, 0.5, 0.5);
+                    glyph = RLTK::to_cp437('.');
+                    fg = RLTK::RGB::from_f32(0.0, 0.5, 0.5);
                 }
                 TileType::Wall => {
-                    glyph = rltk::to_cp437('#');
-                    fg = RGB::from_f32(0., 1.0, 0.);
+                    glyph = RLTK::to_cp437('#');
+                    fg = RLTK::RGB::from_f32(0., 1.0, 0.);
                 }
             }
             if !map.visible_tiles[idx] { fg = fg.to_greyscale() }
-            ctx.set(x, y, fg, RGB::from_f32(0., 0., 0.), glyph);
+            ctx.set(x, y, fg, RLTK::RGB::from_f32(0., 0., 0.), glyph);
         }
 
         // Move the coordinates
