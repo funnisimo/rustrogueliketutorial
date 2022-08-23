@@ -152,22 +152,22 @@ It's a good idea to occasionally run `cargo update` - this will update the libra
 Go ahead and replace the contents of `src\main.rs` with:
 
 ```rust
-use bracket_lib::prelude::{main_loop, BError, BTerm, BTermBuilder, GameState};
+use bracket_lib::prelude as RLTK;
 
 struct State {}
-impl GameState for State {
-    fn tick(&mut self, ctx : &mut BTerm) {
+impl RLTK::GameState for State {
+    fn tick(&mut self, ctx: &mut RLTK::BTerm) {
         ctx.cls();
         ctx.print(1, 1, "Hello Rust World");
     }
 }
 
-fn main() -> BError {
-    let context = BTermBuilder::simple80x50()
+fn main() -> RLTK::BError {
+    let context = RLTK::BTermBuilder::simple80x50()
         .with_title("Roguelike Tutorial")
         .build()?;
-    let gs = State{ };
-    main_loop(context, gs)
+    let gs = State {};
+    RLTK::main_loop(context, gs)
 }
 ```
 
@@ -177,28 +177,28 @@ Save, and go back to the terminal. Type `cargo run`, and you will be greeted wit
 
 If you're new to Rust, you are probably wondering what exactly the `Hello Rust` code does, and why it is there - so we'll take a moment to go through it.
 
-1. The first line is equivalent to C++'s `#include` or C#'s `using`. It simply tells the compiler that we are going to require some types from the namespace `bracket_lib::prelude`. You used to need an additional `extern crate` line here, but the most recent version of Rust can now figure it out for you.
+1. The first line is equivalent to C++'s `#include` or C#'s `using`. It simply tells the compiler that we are going to require some types from the namespace `bracket_lib::prelude`. We are going to scope this namespace as `RLTK` to make it clear when we are using functions/types from the library. You used to need an additional `extern crate` line here, but the most recent version of Rust can now figure it out for you.
 2. With `struct State{}`, we are creating a new `structure`. Structures are like Records in Pascal, or Classes in many other languages: you can store a bunch of data inside them, and you can also attach "methods" (functions) to them. In this case, we don't actually need any data - we just need a place to attach code. If you'd like to learn more about Structs, [this is the Rust Book chapter on the topic](https://doc.rust-lang.org/book/ch05-00-structs.html)
-3. `impl GameState for State` is quite a mouthful! We're telling Rust that our `State` structure _implements_ the _trait_ `GameState`. Traits are like interfaces or base classes in other languages: they setup a structure for you to implement in your own code, which can then interact with the library that provides them - without that library having to know anything else about your code. In this case, `GameState` is a trait provided by bracket-lib. Bracket-lib requires that you have one - it uses it to call into your program on each frame. You can learn about traits [in this chapter of the Rust book](https://doc.rust-lang.org/book/ch10-02-traits.html).
-4. `fn tick(&mut self, ctx : &mut BTerm)` is a _function_ definition. We're inside the trait implementation scope, so we are implementing the function _for_ the trait - so it _has_ to match the type required by the trait. Functions are a basic building block of Rust, I recommend [the Rust book chapter on the topic](https://doc.rust-lang.org/book/ch03-03-how-functions-work.html).
+3. `impl RLTK::GameState for State` is quite a mouthful! We're telling Rust that our `State` structure _implements_ the _trait_ `GameState`. Traits are like interfaces or base classes in other languages: they setup a structure for you to implement in your own code, which can then interact with the library that provides them - without that library having to know anything else about your code. In this case, `GameState` is a trait provided by bracket-lib. Bracket-lib requires that you have one - it uses it to call into your program on each frame. You can learn about traits [in this chapter of the Rust book](https://doc.rust-lang.org/book/ch10-02-traits.html).
+4. `fn tick(&mut self, ctx : &mut RLTK::BTerm)` is a _function_ definition. We're inside the trait implementation scope, so we are implementing the function _for_ the trait - so it _has_ to match the type required by the trait. Functions are a basic building block of Rust, I recommend [the Rust book chapter on the topic](https://doc.rust-lang.org/book/ch03-03-how-functions-work.html).
    1. In this case, `fn tick` means "make a function, called tick" (it's called "tick" because it "ticks" with each frame that is rendered; it's common in game programming to refer to each iteration as a tick).
    2. It doesn't end with an `-> type`, so it is equivalent to a `void` function in C - it doesn't return any data once called. The parameters can also benefit from a little explanation.
    3. `&mut self` means "this function requires access to the parent structure, and may change it" (the `mut` is short for "mutable" - meaning it can change variables inside the structure - "state"). You can also have functions in a structure that just have `&self` - meaning, we can _see_ the content of the structure, but can't change it. If you omit the `&self` altogether, the function can't see the structure at all - but can be called as if the structure was a _namespace_ (you see this a lot with functions called `new` - they make a new copy of the structure for you).
-   4. `ctx: &mut BTerm` means "pass in a variable called `ctx`" (`ctx` is an abbreviation for "context"). The colon indicates that we're specifying what _type_ of variable it must be.
+   4. `ctx: &mut RLTK::BTerm` means "pass in a variable called `ctx`" (`ctx` is an abbreviation for "context"). The colon indicates that we're specifying what _type_ of variable it must be.
    5. `&` means "pass a reference" - which is a _pointer_ to an existing copy of the variable. The variable isn't copied, you are working on the version that was passed in; if you make a change, you are changing the original. [The Rust Book explains this better than I can](https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html).
    6. `mut` once again indicates that this is a "mutable" reference: you are allowed to make changes to the context.
-   7. Finally `BTerm` is the _type_ of the variable you are receiving. In this case, it's a `struct` defined inside the `bracket-lib` library that provides various things you can do to the screen.
+   7. Finally `RLTK::BTerm` is the _type_ of the variable you are receiving. In this case, it's a `struct` defined inside the `bracket-lib` library that provides various things you can do to the screen.
 5. `ctx.cls();` says "call the `cls` function provided by the variable `ctx`. `cls` is a common abbreviation for "clear the screen" - we're telling our _context_ that it should clear the virtual terminal. It's a good idea to do this at the beginning of a frame, unless you specifically don't want to.
 6. `ctx.print(1, 1, "Hello Rust World");` is asking the _context_ to _print_ "Hello Rust World" at the location (1,1).
 7. Now we get to `fn main()`. _Every_ program has a `main` function: it tells the operating system where to start the program.
 8. ```
-    let context = BTermBuilder::simple80x50()
+    let context = RLTK::BTermBuilder::simple80x50()
         .with_title("Roguelike Tutorial")
         .build()?;
    ```
    is an example of calling a _function_ from inside a `struct` - where that struct doesn't take a "self" function. In other languages, this would be called a _constructor_. We're calling the function `simple80x50` (which is a builder provided by bracket-lib to make a terminal 80 characters wide by 50 characters high. The window title is "Roguelike Tutorial".
 9. `let gs = State{ };` is an example of a _variable_ assignment (see [The Rust Book](https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html)). We're making a new variable called `gs` (short for "game state"), and setting it to be a copy of the `State` struct we defined above.
-10. `main_loop(context, gs)` calls a function called `main_loop`. It needs both the `context` and the `GameState` we made earlier - so we pass those along. Bracket-lib tries to take some of the complexity of running a GUI/game application away, and provides this wrapper. The function now takes over control of the program, and will call your `tick` function (see above) every time the program "ticks" - that is, finishes one cycle and moves to the next. This can happen 60 or more times per second!
+10. `RLTK::main_loop(context, gs)` calls a function called `main_loop`. It needs both the `context` and the `GameState` we made earlier - so we pass those along. Bracket-lib tries to take some of the complexity of running a GUI/game application away, and provides this wrapper. The function now takes over control of the program, and will call your `tick` function (see above) every time the program "ticks" - that is, finishes one cycle and moves to the next. This can happen 60 or more times per second!
 
 Hopefully that made some sense!
 

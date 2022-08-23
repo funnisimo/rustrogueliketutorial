@@ -1,17 +1,17 @@
-use bracket_lib::prelude::{main_loop, BError, BTerm, BTermBuilder, GameState};
+use bracket_lib::prelude as RLTK;
 
 struct State {}
-impl GameState for State {
-    fn tick(&mut self, ctx: &mut BTerm) {
+impl RLTK::GameState for State {
+    fn tick(&mut self, ctx: &mut RLTK::BTerm) {
         ctx.cls();
         ctx.print(1, 1, "Hello Rust World");
     }
 }
 
-fn main() -> BError {
-    let context = BTermBuilder::simple80x50()
+fn main() -> RLTK::BError {
+    let context = RLTK::BTermBuilder::simple80x50()
         .with_title("Roguelike Tutorial")
         .build()?;
     let gs = State {};
-    main_loop(context, gs)
+    RLTK::main_loop(context, gs)
 }
