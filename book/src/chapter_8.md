@@ -2,11 +2,11 @@
 
 ---
 
-***About this tutorial***
+**_About this tutorial_**
 
-*This tutorial is free and open source, and all code uses the MIT license - so you are free to do with it as you like. My hope is that you will enjoy the tutorial, and make great games!*
+_This tutorial is free and open source, and all code uses the MIT license - so you are free to do with it as you like. My hope is that you will enjoy the tutorial, and make great games!_
 
-*If you enjoy this and would like me to keep writing, please consider supporting [my Patreon](https://www.patreon.com/blackfuture).*
+_If you enjoy this and would like me to keep writing, please consider supporting [my Patreon](https://www.patreon.com/blackfuture)._
 
 [![Hands-On Rust](./beta-webBanner.jpg)](https://pragprog.com/titles/hwrust/hands-on-rust/)
 
@@ -17,28 +17,30 @@ In this chapter, we'll add a user interface to the game.
 # Shrinking the map
 
 We'll start off by going to `map.rs`, and adding some constants: `MAPWIDTH`, `MAPHEIGHT` and `MAPCOUNT`:
+
 ```rust
 const MAPWIDTH : usize = 80;
 const MAPHEIGHT : usize = 50;
 const MAPCOUNT : usize = MAPHEIGHT * MAPWIDTH;
 ```
 
-Then we'll go through and change every reference to 80*50 to `MAPCOUNT`, and references to the map size to use the constants. When this is done and running, we'll change the `MAPHEIGHT` to 43 - to give us room at the bottom of the screen for a user interface panel.
+Then we'll go through and change every reference to 80\*50 to `MAPCOUNT`, and references to the map size to use the constants. When this is done and running, we'll change the `MAPHEIGHT` to 43 - to give us room at the bottom of the screen for a user interface panel.
 
 # Some minimal GUI elements
 
 We'll create a new file, `gui.rs` to hold our code. We'll go with a really minimal start:
 
 ```rust
-use rltk::{ RGB, Rltk, Console };
+use bracket_lib::prelude as RLTK;
 use specs::prelude::*;
 
-pub fn draw_ui(ecs: &World, ctx : &mut Rltk) {
-    ctx.draw_box(0, 43, 79, 6, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK));
+pub fn draw_ui(ecs: &World, ctx : &mut RLTK::BTerm) {
+    ctx.draw_box(0, 43, 79, 6, RLTK::RGB::named(RLTK::WHITE), RLTK::RGB::named(RLTK::BLACK));
 }
 ```
 
 We add a `mod gui` to the import block at the top of `main.rs`, and call it at the end of `tick`:
+
 ```rust
 gui::draw_ui(&self.ecs, ctx);
 ```
@@ -52,27 +54,27 @@ If we `cargo run` now, we'll see that the map has shrunk - and we have a white b
 It would help the player out to know how much health they have left. Fortunately, RLTK provides a convenient helper for this. We'll need to obtain the player's health from the ECS, and render it. This is pretty easy, and you should be comfortable with it by now. The code looks like this:
 
 ```rust
-use rltk::{ RGB, Rltk, Console };
+use bracket_lib::prelude as RLTK;
 use specs::prelude::*;
 use super::{CombatStats, Player};
 
-pub fn draw_ui(ecs: &World, ctx : &mut Rltk) {
-    ctx.draw_box(0, 43, 79, 6, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK));
+pub fn draw_ui(ecs: &World, ctx : &mut RLTK::BTerm) {
+    ctx.draw_box(0, 43, 79, 6, RLTK::RGB::named(RLTK::WHITE), RLTK::RGB::named(RLTK::BLACK));
 
     let combat_stats = ecs.read_storage::<CombatStats>();
     let players = ecs.read_storage::<Player>();
     for (_player, stats) in (&players, &combat_stats).join() {
         let health = format!(" HP: {} / {} ", stats.hp, stats.max_hp);
-        ctx.print_color(12, 43, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), &health);
+        ctx.print_color(12, 43, RLTK::RGB::named(RLTK::YELLOW), RLTK::RGB::named(RLTK::BLACK), &health);
 
-        ctx.draw_bar_horizontal(28, 43, 51, stats.hp, stats.max_hp, RGB::named(rltk::RED), RGB::named(rltk::BLACK));
+        ctx.draw_bar_horizontal(28, 43, 51, stats.hp, stats.max_hp, RLTK::RGB::named(RLTK::RED), RLTK::RGB::named(RLTK::BLACK));
     }
 }
 ```
 
 # Adding a message log
 
-The game log makes sense as a *resource*: it's available to any system that wants to tell you something, and there's very little restriction as to what might want to tell you something. We'll start by modelling the log itself. Make a new file, `gamelog.rs`. We'll start very simply:
+The game log makes sense as a _resource_: it's available to any system that wants to tell you something, and there's very little restriction as to what might want to tell you something. We'll start by modelling the log itself. Make a new file, `gamelog.rs`. We'll start very simply:
 
 ```rust
 pub struct GameLog {
@@ -131,7 +133,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                         log.entries.push(format!("{} is unable to hurt {}", &name.name, &target_name.name));
                     } else {
                         log.entries.push(format!("{} hits {}, for {} hp.", &name.name, &target_name.name, damage));
-                        SufferDamage::new_damage(&mut inflict_damage, wants_melee.target, damage);                        
+                        SufferDamage::new_damage(&mut inflict_damage, wants_melee.target, damage);
                     }
                 }
             }
@@ -161,7 +163,7 @@ pub fn delete_the_dead(ecs : &mut World) {
         let entities = ecs.entities();
         let mut log = ecs.write_resource::<GameLog>();
         for (entity, stats) in (&entities, &combat_stats).join() {
-            if stats.hp < 1 { 
+            if stats.hp < 1 {
                 let player = players.get(entity);
                 match player {
                     None => {
@@ -179,7 +181,7 @@ pub fn delete_the_dead(ecs : &mut World) {
 
     for victim in dead {
         ecs.delete_entity(victim).expect("Unable to delete");
-    }    
+    }
 }
 ```
 
@@ -190,7 +192,7 @@ Let's start by looking at how we obtain mouse information from RLTK. It's really
 ```rust
 // Draw mouse cursor
 let mouse_pos = ctx.mouse_pos();
-ctx.set_bg(mouse_pos.0, mouse_pos.1, RGB::named(rltk::MAGENTA));
+ctx.set_bg(mouse_pos.0, mouse_pos.1, RLTK::RGB::named(RLTK::MAGENTA));
 ```
 
 This sets the background of the cell at which the mouse is pointed to magenta. As you can see, mouse information arrives from RLTK as part of the context.
@@ -198,7 +200,7 @@ This sets the background of the cell at which the mouse is pointed to magenta. A
 Now we'll introduce a new function, `draw_tooltips` and call it at the end of `draw_ui`. New new function looks like this:
 
 ```rust
-fn draw_tooltips(ecs: &World, ctx : &mut Rltk) {
+fn draw_tooltips(ecs: &World, ctx : &mut RLTK::BTerm) {
     let map = ecs.fetch::<Map>();
     let names = ecs.read_storage::<Name>();
     let positions = ecs.read_storage::<Position>();
@@ -221,37 +223,37 @@ fn draw_tooltips(ecs: &World, ctx : &mut Rltk) {
         width += 3;
 
         if mouse_pos.0 > 40 {
-            let arrow_pos = Point::new(mouse_pos.0 - 2, mouse_pos.1);
+            let arrow_pos = RLTK::Point::new(mouse_pos.0 - 2, mouse_pos.1);
             let left_x = mouse_pos.0 - width;
             let mut y = mouse_pos.1;
             for s in tooltip.iter() {
-                ctx.print_color(left_x, y, RGB::named(rltk::WHITE), RGB::named(rltk::GREY), s);
+                ctx.print_color(left_x, y, RLTK::RGB::named(RLTK::WHITE), RLTK::RGB::named(RLTK::GREY), s);
                 let padding = (width - s.len() as i32)-1;
                 for i in 0..padding {
-                    ctx.print_color(arrow_pos.x - i, y, RGB::named(rltk::WHITE), RGB::named(rltk::GREY), &" ".to_string());
+                    ctx.print_color(arrow_pos.x - i, y, RLTK::RGB::named(RLTK::WHITE), RLTK::RGB::named(RLTK::GREY), &" ".to_string());
                 }
                 y += 1;
             }
-            ctx.print_color(arrow_pos.x, arrow_pos.y, RGB::named(rltk::WHITE), RGB::named(rltk::GREY), &"->".to_string());
+            ctx.print_color(arrow_pos.x, arrow_pos.y, RLTK::RGB::named(RLTK::WHITE), RLTK::RGB::named(RLTK::GREY), &"->".to_string());
         } else {
             let arrow_pos = Point::new(mouse_pos.0 + 1, mouse_pos.1);
             let left_x = mouse_pos.0 +3;
             let mut y = mouse_pos.1;
             for s in tooltip.iter() {
-                ctx.print_color(left_x + 1, y, RGB::named(rltk::WHITE), RGB::named(rltk::GREY), s);
+                ctx.print_color(left_x + 1, y, RLTK::RGB::named(RLTK::WHITE), RLTK::RGB::named(RLTK::GREY), s);
                 let padding = (width - s.len() as i32)-1;
                 for i in 0..padding {
-                    ctx.print_color(arrow_pos.x + 1 + i, y, RGB::named(rltk::WHITE), RGB::named(rltk::GREY), &" ".to_string());
+                    ctx.print_color(arrow_pos.x + 1 + i, y, RLTK::RGB::named(RLTK::WHITE), RLTK::RGB::named(RLTK::GREY), &" ".to_string());
                 }
                 y += 1;
             }
-            ctx.print_color(arrow_pos.x, arrow_pos.y, RGB::named(rltk::WHITE), RGB::named(rltk::GREY), &"<-".to_string());
+            ctx.print_color(arrow_pos.x, arrow_pos.y, RLTK::RGB::named(RLTK::WHITE), RLTK::RGB::named(RLTK::GREY), &"<-".to_string());
         }
     }
 }
 ```
 
-It starts by obtaining read access to the components we need for tooltips: names and positions. It also gets read access to the map itself. Then we check that mouse cursor is actually *on* the map, and bail out if it isn't - no point in trying to draw tooltips for something that can never have any!
+It starts by obtaining read access to the components we need for tooltips: names and positions. It also gets read access to the map itself. Then we check that mouse cursor is actually _on_ the map, and bail out if it isn't - no point in trying to draw tooltips for something that can never have any!
 
 The remainder says "if we have any tooltips, look at the mouse position" - if its on the left, we'll put the tooltip to the right, otherwise to the left.
 
@@ -264,14 +266,14 @@ If you `cargo run` your project now, it looks like this:
 Since we're on look and feel, lets consider enabling an RLTK feature: post-processing to give scanlines and screen burn, for that truly retro feel. It's entirely up to you if you want to use this! In `main.rs`, the initial setup simply replaced the first `init` command with:
 
 ```rust
-use rltk::RltkBuilder;
-    let mut context = RltkBuilder::simple80x50()
+
+    let mut context = RLTK::BTermBuilder::simple80x50()
         .with_title("Roguelike Tutorial")
         .build()?;
 context.with_post_scanlines(true);
 ```
 
-If you choose to do this, the game looks a bit like the classic *Caves of Qud*:
+If you choose to do this, the game looks a bit like the classic _Caves of Qud_:
 
 ![Screenshot](./c8-s5.png)
 
