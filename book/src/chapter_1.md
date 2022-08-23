@@ -140,7 +140,7 @@ Go ahead and make sure that your name is correct! Next, we're going to ask Cargo
 
 ```toml
 [dependencies]
-bracket-lib = { version = "0.8.1" }
+bracket-lib = { version = "0.8" }
 ```
 
 We're telling it that the package is named `bracket-lib`, and is available in Cargo - so we just have to give it a version. You can do `cargo search bracket-lib` to see the latest version at any time, or go to [the crate webpage](https://crates.io/crates/bracket-lib).

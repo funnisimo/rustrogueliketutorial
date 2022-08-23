@@ -51,7 +51,7 @@ To start, we want to tell Cargo that we're going to use Specs. Open your `Cargo.
 
 ```toml
 [dependencies]
-bracket-lib = { version = "0.8.1" }
+bracket-lib = { version = "0.8" }
 specs = "0.18"
 specs-derive = "0.4.1"
 ```

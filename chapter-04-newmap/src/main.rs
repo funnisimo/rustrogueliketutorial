@@ -1,4 +1,4 @@
-use rltk::{GameState, Rltk, RGB};
+use bracket_lib::prelude as RLTK;
 use specs::prelude::*;
 
 mod components;
@@ -7,11 +7,9 @@ mod map;
 pub use map::*;
 mod player;
 use player::*;
-mod rect;
-pub use rect::Rect;
 
 pub struct State {
-    pub ecs: World
+    pub ecs: World,
 }
 
 impl State {
@@ -20,8 +18,8 @@ impl State {
     }
 }
 
-impl GameState for State {
-    fn tick(&mut self, ctx : &mut Rltk) {
+impl RLTK::GameState for State {
+    fn tick(&mut self, ctx: &mut RLTK::BTerm) {
         ctx.cls();
 
         player_input(self, ctx);
@@ -39,32 +37,32 @@ impl GameState for State {
     }
 }
 
-fn main() -> rltk::BError {
-    use rltk::RltkBuilder;
-    let context = RltkBuilder::simple80x50()
+fn main() -> RLTK::BError {
+    let context = RLTK::BTermBuilder::simple80x50()
         .with_title("Roguelike Tutorial")
         .build()?;
-    let mut gs = State {
-        ecs: World::new()
-    };
+    let mut gs = State { ecs: World::new() };
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Player>();
 
     let (rooms, map) = new_map_rooms_and_corridors();
     gs.ecs.insert(map);
-    let (player_x, player_y) = rooms[0].center();
+    let player_pos = rooms[0].center();
 
     gs.ecs
         .create_entity()
-        .with(Position { x: player_x, y: player_y })
-        .with(Renderable {
-            glyph: rltk::to_cp437('@'),
-            fg: RGB::named(rltk::YELLOW),
-            bg: RGB::named(rltk::BLACK),
+        .with(Position {
+            x: player_pos.x,
+            y: player_pos.y,
         })
-        .with(Player{})
+        .with(Renderable {
+            glyph: RLTK::to_cp437('@'),
+            fg: RLTK::RGB::named(RLTK::YELLOW),
+            bg: RLTK::RGB::named(RLTK::BLACK),
+        })
+        .with(Player {})
         .build();
 
-    rltk::main_loop(context, gs)
+    RLTK::main_loop(context, gs)
 }

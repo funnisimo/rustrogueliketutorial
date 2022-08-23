@@ -1,6 +1,6 @@
+use bracket_lib::prelude as RLTK;
 use specs::prelude::*;
 use specs_derive::*;
-use rltk::{RGB};
 
 #[derive(Component)]
 pub struct Position {
@@ -10,9 +10,9 @@ pub struct Position {
 
 #[derive(Component)]
 pub struct Renderable {
-    pub glyph: rltk::FontCharType,
-    pub fg: RGB,
-    pub bg: RGB,
+    pub glyph: RLTK::FontCharType,
+    pub fg: RLTK::RGB,
+    pub bg: RLTK::RGB,
 }
 
 #[derive(Component, Debug)]
