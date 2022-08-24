@@ -2,11 +2,11 @@
 
 ---
 
-***About this tutorial***
+**_About this tutorial_**
 
-*This tutorial is free and open source, and all code uses the MIT license - so you are free to do with it as you like. My hope is that you will enjoy the tutorial, and make great games!*
+_This tutorial is free and open source, and all code uses the MIT license - so you are free to do with it as you like. My hope is that you will enjoy the tutorial, and make great games!_
 
-*If you enjoy this and would like me to keep writing, please consider supporting [my Patreon](https://www.patreon.com/blackfuture).*
+_If you enjoy this and would like me to keep writing, please consider supporting [my Patreon](https://www.patreon.com/blackfuture)._
 
 [![Hands-On Rust](./beta-webBanner.jpg)](https://pragprog.com/titles/hwrust/hands-on-rust/)
 
@@ -16,19 +16,19 @@ So far, we have maps, monsters, and bashing things! No roguelike "murder hobo" e
 
 # Thinking about composing items
 
-A major difference between object-oriented and entity-component systems is that rather than thinking about something as being located on an inheritance tree, you think about how it *composes* from components. Ideally, you already have some of the components ready to use!
+A major difference between object-oriented and entity-component systems is that rather than thinking about something as being located on an inheritance tree, you think about how it _composes_ from components. Ideally, you already have some of the components ready to use!
 
 So... what makes up an item? Thinking about it, an item can be said to have the following properties:
 
-* It has a `Renderable` - a way to draw it.
-* If its on the ground, awaiting pickup - it has a `Position`.
-* If its NOT on the ground - say in a backpack, it needs a way to indicate that it it is stored. We'll start with `InPack`
-* It's an `item`, which implies that it can be picked up. So it'll need an `Item` component of some sort.
-* If it can be used, it will need some way to indicate that it *can* be used - and what to do with it.
+- It has a `Renderable` - a way to draw it.
+- If its on the ground, awaiting pickup - it has a `Position`.
+- If its NOT on the ground - say in a backpack, it needs a way to indicate that it it is stored. We'll start with `InPack`
+- It's an `item`, which implies that it can be picked up. So it'll need an `Item` component of some sort.
+- If it can be used, it will need some way to indicate that it _can_ be used - and what to do with it.
 
 # Consistently random
 
-Computers are actually really bad at random numbers. Computers are inherently deterministic - so (without getting into cryptographic stuff) when you ask for a "random" number, you are actually getting a "really hard to predict next number in a sequence". The sequence is controlled by a *seed* - with the same seed, you always get the same dice rolls!
+Computers are actually really bad at random numbers. Computers are inherently deterministic - so (without getting into cryptographic stuff) when you ask for a "random" number, you are actually getting a "really hard to predict next number in a sequence". The sequence is controlled by a _seed_ - with the same seed, you always get the same dice rolls!
 
 Since we have an ever-increasing number of things that use randomness, lets go ahead and make the RNG (Random Number Generator) a resource.
 
@@ -101,7 +101,7 @@ fn monster<S : ToString>(ecs: &mut World, x: i32, y: i32, glyph : rltk::FontChar
 }
 ```
 
-As you can see, we've taken the existing code in `main.rs` - and wrapped it up in functions in a different module. We don't *have* to do this - but it helps keep things tidy. Since we're going to be expanding our spawning, it's nice to keep things separated out. Now we modify `main.rs` to use it:
+As you can see, we've taken the existing code in `main.rs` - and wrapped it up in functions in a different module. We don't _have_ to do this - but it helps keep things tidy. Since we're going to be expanding our spawning, it's nice to keep things separated out. Now we modify `main.rs` to use it:
 
 ```rust
 let player_entity = spawner::player(&mut gs.ecs, player_x, player_y);
@@ -196,6 +196,7 @@ pub struct Potion {
 ```
 
 We of course need to register these in `main.rs`:
+
 ```rust
 gs.ecs.register::<Item>();
 gs.ecs.register::<Potion>();
@@ -351,6 +352,7 @@ VirtualKeyCode::G => get_item(&mut gs.ecs),
 ```
 
 As you probably guessed, the next step is to implement `get_item`:
+
 ```rust
 fn get_item(ecs: &mut World) {
     let player_pos = ecs.fetch::<Point>();
@@ -358,7 +360,7 @@ fn get_item(ecs: &mut World) {
     let entities = ecs.entities();
     let items = ecs.read_storage::<Item>();
     let positions = ecs.read_storage::<Position>();
-    let mut gamelog = ecs.fetch_mut::<GameLog>();    
+    let mut gamelog = ecs.fetch_mut::<GameLog>();
 
     let mut target_item : Option<Entity> = None;
     for (item_entity, _item, position) in (&entities, &items, &positions).join() {
@@ -379,11 +381,11 @@ fn get_item(ecs: &mut World) {
 
 This obtains a bunch of references/accessors from the ECS, and iterates all items with a position. If it matches the player's position, `target_item` is set. Then, if `target_item` is none - we tell the player that there is nothing to pick up. If it isn't, it adds a pickup request for the system we just added to use.
 
-If you `cargo run` the project now, you can press `g` anywhere to be told that there's nothing to get. If you are standing on a potion, it will vanish when you press `g`! It's in our backpack - but we haven't any way to *know* that other than the log entry.
+If you `cargo run` the project now, you can press `g` anywhere to be told that there's nothing to get. If you are standing on a potion, it will vanish when you press `g`! It's in our backpack - but we haven't any way to _know_ that other than the log entry.
 
 # Listing your inventory
 
-It's a good idea to be able to see your inventory list! This will be a game *mode* - that is, another state in which the game loop can find itself. So to start, we'll extend `RunMode` in `main.rs` to include it:
+It's a good idea to be able to see your inventory list! This will be a game _mode_ - that is, another state in which the game loop can find itself. So to start, we'll extend `RunMode` in `main.rs` to include it:
 
 ```rust
 #[derive(PartialEq, Copy, Clone)]
@@ -391,11 +393,13 @@ pub enum RunState { AwaitingInput, PreRun, PlayerTurn, MonsterTurn, ShowInventor
 ```
 
 The `i` key is a popular choice for inventory (`b` is also popular!), so in `player.rs` we'll add the following to the player input code:
+
 ```rust
 VirtualKeyCode::I => return RunState::ShowInventory,
 ```
 
 In our `tick` function in `main.rs`, we'll add another matching:
+
 ```rust
 RunState::ShowInventory => {
     if gui::show_inventory(self, ctx) == gui::ItemMenuResult::Cancel {
@@ -405,6 +409,7 @@ RunState::ShowInventory => {
 ```
 
 That naturally leads to implementing `show_inventory`! In `gui.rs`, we add:
+
 ```rust
 #[derive(PartialEq, Copy, Clone)]
 pub enum ItemMenuResult { Cancel, NoResponse, Selected }
@@ -453,7 +458,8 @@ If you `cargo run` your project now, you can see items that you have collected:
 
 # Using Items
 
-Now that we can display our inventory, lets make selecting an item actually *use* it. We'll extend the menu to return both an item entity and a result:
+Now that we can display our inventory, lets make selecting an item actually _use_ it. We'll extend the menu to return both an item entity and a result:
+
 ```rust
 pub fn show_inventory(gs : &mut State, ctx : &mut Rltk) -> (ItemMenuResult, Option<Entity>) {
     let player_entity = gs.ecs.fetch::<Entity>();
@@ -487,11 +493,11 @@ pub fn show_inventory(gs : &mut State, ctx : &mut Rltk) -> (ItemMenuResult, Opti
         Some(key) => {
             match key {
                 VirtualKeyCode::Escape => { (ItemMenuResult::Cancel, None) }
-                _ => { 
+                _ => {
                     let selection = rltk::letter_to_option(key);
                     if selection > -1 && selection < count as i32 {
                         return (ItemMenuResult::Selected, Some(equippable[selection as usize]));
-                    }  
+                    }
                     (ItemMenuResult::NoResponse, None)
                 }
             }
@@ -501,6 +507,7 @@ pub fn show_inventory(gs : &mut State, ctx : &mut Rltk) -> (ItemMenuResult, Opti
 ```
 
 Our call to `show_inventory` in `main.rs` is now invalid, so we'll fix it up:
+
 ```rust
 RunState::ShowInventory => {
     let result = gui::show_inventory(self, ctx);
@@ -568,6 +575,7 @@ impl<'a> System<'a> for PotionUseSystem {
 ```
 
 And register it in the list of systems to run:
+
 ```rust
 let mut potions = PotionUseSystem{};
 potions.run_now(&self.ecs);
@@ -584,7 +592,9 @@ RunState::PreRun => {
     newrunstate = RunState::AwaitingInput;
 }
 ```
-...  
+
+...
+
 ```rust
 RunState::PlayerTurn => {
     self.run_systems();
@@ -599,6 +609,7 @@ RunState::MonsterTurn => {
 ```
 
 Finally we have to change the `RunState::ShowInventory` handling if an item was selected, we create a `WantsToDrinkPotion` intent:
+
 ```rust
 RunState::ShowInventory => {
                 let result = gui::show_inventory(self, ctx);
@@ -624,6 +635,7 @@ NOW if you `cargo run` the project, you can pickup and drink health potions:
 You probably want to be able to drop items from your inventory, especially later when they can be used as bait. We'll follow a similar pattern for this section - create an intent component, a menu to select it, and a system to perform the drop.
 
 So we create a component (in `components.rs`), and register it in `main.rs`:
+
 ```rust
 #[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct WantsToDropItem {
@@ -632,6 +644,7 @@ pub struct WantsToDropItem {
 ```
 
 We add another system to `inventory_system.rs`:
+
 ```rust
 pub struct ItemDropSystem {}
 
@@ -670,23 +683,27 @@ impl<'a> System<'a> for ItemDropSystem {
 ```
 
 Register it in the dispatch builder in `main.rs`:
+
 ```rust
 let mut drop_items = ItemDropSystem{};
 drop_items.run_now(&self.ecs);
 ```
 
 We'll add a new `RunState` in `main.rs`:
+
 ```rust
 #[derive(PartialEq, Copy, Clone)]
 pub enum RunState { AwaitingInput, PreRun, PlayerTurn, MonsterTurn, ShowInventory, ShowDropItem }
 ```
 
-Now in `player.rs`, we add `d` for *drop* to the list of commands:
+Now in `player.rs`, we add `d` for _drop_ to the list of commands:
+
 ```rust
 VirtualKeyCode::D => return RunState::ShowDropItem,
 ```
 
 In `gui.rs`, we need another menu - this time for dropping items:
+
 ```rust
 pub fn drop_item_menu(gs : &mut State, ctx : &mut Rltk) -> (ItemMenuResult, Option<Entity>) {
     let player_entity = gs.ecs.fetch::<Entity>();
@@ -720,11 +737,11 @@ pub fn drop_item_menu(gs : &mut State, ctx : &mut Rltk) -> (ItemMenuResult, Opti
         Some(key) => {
             match key {
                 VirtualKeyCode::Escape => { (ItemMenuResult::Cancel, None) }
-                _ => { 
+                _ => {
                     let selection = rltk::letter_to_option(key);
                     if selection > -1 && selection < count as i32 {
                         return (ItemMenuResult::Selected, Some(equippable[selection as usize]));
-                    }  
+                    }
                     (ItemMenuResult::NoResponse, None)
                 }
             }
@@ -734,6 +751,7 @@ pub fn drop_item_menu(gs : &mut State, ctx : &mut Rltk) -> (ItemMenuResult, Opti
 ```
 
 We also need to extend the state handler in `main.rs` to use it:
+
 ```rust
 RunState::ShowDropItem => {
     let result = gui::drop_item_menu(self, ctx);
@@ -779,7 +797,7 @@ Your IDE is probably now highlighting lots of errors for `Renderable` components
 })
 ```
 
-To make this *do* something, we go to our item rendering code in `main.rs` and add a sort to the iterators. We referenced the [Book of Specs](https://specs.amethyst.rs/docs/tutorials/11_advanced_component.html) for how to do this! Basically, we obtain the joined set of `Position` and `Renderable` components, and collect them into a vector. We then sort that vector, and iterate it to render in the appropriate order. In `main.rs`, replace the previous entity rendering code with:
+To make this _do_ something, we go to our item rendering code in `main.rs` and add a sort to the iterators. We referenced the [Book of Specs](https://specs.amethyst.rs/docs/tutorials/11_advanced_component.html) for how to do this! Basically, we obtain the joined set of `Position` and `Renderable` components, and collect them into a vector. We then sort that vector, and iterate it to render in the appropriate order. In `main.rs`, replace the previous entity rendering code with:
 
 ```rust
 let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
